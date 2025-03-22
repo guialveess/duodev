@@ -6,35 +6,17 @@ import { TextRotate } from "@/app/components/ui/text-rotate";
 
 const Home = () => {
   const [transcription, setTranscription] = useState("");
-  const [isProcessing, setIsProcessing] = useState(false); 
+  const [isProcessing, setIsProcessing] = useState(false);
 
-  const handleRecordingComplete = async (audioBlob: Blob) => {
-    const formData = new FormData();
-    formData.append("file", audioBlob, "audio.webm");
-
-    setIsProcessing(true);
-
-    try {
-      const response = await fetch("/api/transcribe", {
-        method: "POST",
-        body: formData,
-      });
-
-      const result = await response.json();
-      setTranscription(result.transcription || "Erro na transcrição");
-    } catch (error) {
-      console.error("Erro:", error);
-      setTranscription("Erro na transcrição");
-    } finally {
-      setIsProcessing(false); 
-    }
+  const handleTranscriptionComplete = (transcription: string) => {
+    setTranscription(transcription);
+    setIsProcessing(false);
   };
 
   return (
     <div className="flex flex-col items-center justify-center min-h-screen p-4">
-      <AudioRecorder onRecordingComplete={handleRecordingComplete} />
+      <AudioRecorder onTranscriptionComplete={handleTranscriptionComplete} />
 
-     
       {isProcessing && (
         <div className="mt-8 flex flex-col items-center justify-center">
           <motion.div
@@ -42,8 +24,8 @@ const Home = () => {
             initial={{ rotate: 0 }}
             animate={{ rotate: 360 }}
             transition={{
-              duration: 1, 
-              repeat: Infinity, 
+              duration: 1,
+              repeat: Infinity,
             }}
           />
           <p className="mt-2 h-4 text-xs text-black/70 dark:text-white/70">Pensando...</p>
@@ -57,9 +39,9 @@ const Home = () => {
               <motion.div
                 className="flex whitespace-pre-wrap"
                 layout
-                initial={{ opacity: 0 }} // invisível
+                initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
-                exit={{ opacity: 0 }} // fade-out
+                exit={{ opacity: 0 }}
                 transition={{ type: "spring", damping: 30, stiffness: 400 }}
               >
                 <motion.span

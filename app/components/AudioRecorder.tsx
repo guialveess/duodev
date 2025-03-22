@@ -1,73 +1,66 @@
 "use client";
 
 import { Mic } from "lucide-react";
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect } from "react";
 import { cn } from "@/lib/utils";
+import SpeechRecognition, { useSpeechRecognition } from "react-speech-recognition";
 
 interface AudioRecorderProps {
-  onRecordingComplete: (audioBlob: Blob) => void; 
-  visualizerBars?: number; 
-  className?: string; 
+  onTranscriptionComplete: (transcription: string) => void;
+  visualizerBars?: number;
+  className?: string;
 }
 
 export function AudioRecorder({
-  onRecordingComplete,
+  onTranscriptionComplete,
   visualizerBars = 48,
   className,
 }: AudioRecorderProps) {
   const [isRecording, setIsRecording] = useState(false);
-  const [isProcessing, setIsProcessing] = useState(false); 
+  const [isProcessing, setIsProcessing] = useState(false);
   const [time, setTime] = useState(0);
-  const mediaRecorderRef = useRef<MediaRecorder | null>(null); 
-  const audioChunksRef = useRef<Blob[]>([]); 
+
+  const {
+    transcript,
+    listening,
+    resetTranscript,
+    browserSupportsSpeechRecognition,
+  } = useSpeechRecognition();
+
+  useEffect(() => {
+    if (!browserSupportsSpeechRecognition) {
+      console.error("Seu navegador não suporta reconhecimento de fala.");
+      return;
+    }
+  }, [browserSupportsSpeechRecognition]);
 
   useEffect(() => {
     let intervalId: NodeJS.Timeout;
 
-    if (isRecording) {
-      intervalId = setInterval(() => setTime((t) => t + 1), 1000); 
+    if (listening) {
+      intervalId = setInterval(() => setTime((t) => t + 1), 1000);
     } else {
-      if (audioChunksRef.current.length > 0) {
-        const audioBlob = new Blob(audioChunksRef.current, { type: "audio/webm" }); // blob de áudio
-        onRecordingComplete(audioBlob); // callback com o áudio gravado
+      if (transcript) {
+        onTranscriptionComplete(transcript); 
+        resetTranscript(); 
       }
-      setTime(0); // reseta o tempo
-      audioChunksRef.current = []; // chunks de áudio
-      setIsProcessing(false); 
+      setTime(0); 
+      setIsProcessing(false);
     }
 
-    return () => clearInterval(intervalId); 
-  }, [isRecording, time, onRecordingComplete]);
+    return () => clearInterval(intervalId);
+  }, [listening, transcript, onTranscriptionComplete, resetTranscript]);
 
-
-  const startRecording = async () => {
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true }); 
-      const mediaRecorder = new MediaRecorder(stream, { mimeType: "audio/webm" }); 
-      mediaRecorderRef.current = mediaRecorder;
-
-      mediaRecorder.ondataavailable = (event) => {
-        audioChunksRef.current.push(event.data); 
-      };
-
-      mediaRecorder.onstop = () => {
-        setIsRecording(false);
-        stream.getTracks().forEach((track) => track.stop()); 
-      };
-
-      mediaRecorder.start(); 
-      setIsRecording(true); 
-    } catch (error) {
-      console.error("Erro ao gravar:", error); 
-    }
+  const startRecording = () => {
+    setIsRecording(true);
+    setIsProcessing(true);
+    SpeechRecognition.startListening({ language: "en-US" }); 
   };
 
-  // stopRecording
   const stopRecording = () => {
-    mediaRecorderRef.current?.stop();
-    setIsProcessing(true); 
+    setIsRecording(false);
+    SpeechRecognition.stopListening(); 
   };
-
 
   const formatTime = (seconds: number) => {
     const mins = Math.floor(seconds / 60);
@@ -138,7 +131,7 @@ export function AudioRecorder({
           {isRecording
             ? "Ouvindo..."
             : isProcessing
-            ? "Pensando no que você disse..." // mensagem de "pensando"
+            ? "Pensando no que você disse..."
             : "Clique para falar"}
         </p>
       </div>
