@@ -25,6 +25,7 @@ export function AudioRecorder({
     listening,
     resetTranscript,
     browserSupportsSpeechRecognition,
+    interimTranscript,
   } = useSpeechRecognition();
 
   useEffect(() => {
@@ -32,34 +33,58 @@ export function AudioRecorder({
       console.error("Seu navegador não suporta reconhecimento de fala.");
       return;
     }
+    console.log("Reconhecimento de fala suportado");
   }, [browserSupportsSpeechRecognition]);
+
 
   useEffect(() => {
     let intervalId: NodeJS.Timeout;
 
     if (listening) {
+      console.log("Gravando...");
       intervalId = setInterval(() => setTime((t) => t + 1), 1000);
     } else {
-      if (transcript) {
-        onTranscriptionComplete(transcript); 
-        resetTranscript(); 
-      }
-      setTime(0); 
+      console.log("Gravação parada");
+      setTime(0);
       setIsProcessing(false);
     }
 
     return () => clearInterval(intervalId);
-  }, [listening, transcript, onTranscriptionComplete, resetTranscript]);
+  }, [listening]);
+
+  
+  useEffect(() => {
+    if (isRecording && interimTranscript) {
+      console.log("Transcrição intermitente:", interimTranscript);
+      onTranscriptionComplete(interimTranscript);
+    }
+  }, [interimTranscript, isRecording, onTranscriptionComplete]);
 
   const startRecording = () => {
+    console.log("Iniciando gravação...");
     setIsRecording(true);
     setIsProcessing(true);
-    SpeechRecognition.startListening({ language: "en-US" }); 
+    SpeechRecognition.startListening({
+      language: "en-US",
+      continuous: true, 
+      interimResults: true, 
+    });
   };
 
   const stopRecording = () => {
+    console.log("Parando gravação...");
     setIsRecording(false);
+    setIsProcessing(false);
     SpeechRecognition.stopListening(); 
+    resetTranscript(); 
+  };
+
+  const toggleRecording = () => {
+    if (isRecording) {
+      stopRecording(); 
+    } else {
+      startRecording(); 
+    }
   };
 
   const formatTime = (seconds: number) => {
@@ -79,8 +104,8 @@ export function AudioRecorder({
               : "bg-none hover:bg-black/10 dark:hover:bg-white/10"
           )}
           type="button"
-          onClick={isRecording ? stopRecording : startRecording}
-          disabled={isProcessing}
+          onClick={toggleRecording} 
+          disabled={isProcessing} 
         >
           {isRecording ? (
             <div
