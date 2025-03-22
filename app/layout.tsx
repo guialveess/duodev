@@ -13,7 +13,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "ASR - Speech Recognition",
+  title: "DevDuo",
   description: "Transforme sua fala em texto de forma rápida e precisa com nossa tecnologia de reconhecimento de voz.",
 };
 

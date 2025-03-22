@@ -18,7 +18,7 @@ export async function POST(request: Request) {
     const buffer = await file.arrayBuffer();
 
     const { text } = await hf.automaticSpeechRecognition({
-      model: "openai/whisper-base",
+      model: "openai/whisper-tiny",
       data: new Uint8Array(buffer),
       parameters: {
         language: "en",

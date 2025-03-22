@@ -5,9 +5,9 @@ import { useState, useEffect, useRef } from "react";
 import { cn } from "@/lib/utils";
 
 interface AudioRecorderProps {
-  onRecordingComplete: (audioBlob: Blob) => void; // Add this prop
-  visualizerBars?: number;
-  className?: string;
+  onRecordingComplete: (audioBlob: Blob) => void; 
+  visualizerBars?: number; 
+  className?: string; 
 }
 
 export function AudioRecorder({
@@ -16,52 +16,58 @@ export function AudioRecorder({
   className,
 }: AudioRecorderProps) {
   const [isRecording, setIsRecording] = useState(false);
+  const [isProcessing, setIsProcessing] = useState(false); 
   const [time, setTime] = useState(0);
-  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
-  const audioChunksRef = useRef<Blob[]>([]);
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null); 
+  const audioChunksRef = useRef<Blob[]>([]); 
 
   useEffect(() => {
     let intervalId: NodeJS.Timeout;
-    
+
     if (isRecording) {
-      intervalId = setInterval(() => setTime((t) => t + 1), 1000);
+      intervalId = setInterval(() => setTime((t) => t + 1), 1000); 
     } else {
       if (audioChunksRef.current.length > 0) {
-        const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/webm' });
-        onRecordingComplete(audioBlob); // Use onRecordingComplete here
+        const audioBlob = new Blob(audioChunksRef.current, { type: "audio/webm" }); // blob de áudio
+        onRecordingComplete(audioBlob); // callback com o áudio gravado
       }
-      setTime(0);
-      audioChunksRef.current = [];
+      setTime(0); // reseta o tempo
+      audioChunksRef.current = []; // chunks de áudio
+      setIsProcessing(false); 
     }
 
-    return () => clearInterval(intervalId);
+    return () => clearInterval(intervalId); 
   }, [isRecording, time, onRecordingComplete]);
+
 
   const startRecording = async () => {
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      const mediaRecorder = new MediaRecorder(stream, { mimeType: 'audio/webm' });
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true }); 
+      const mediaRecorder = new MediaRecorder(stream, { mimeType: "audio/webm" }); 
       mediaRecorderRef.current = mediaRecorder;
 
       mediaRecorder.ondataavailable = (event) => {
-        audioChunksRef.current.push(event.data);
+        audioChunksRef.current.push(event.data); 
       };
 
       mediaRecorder.onstop = () => {
         setIsRecording(false);
-        stream.getTracks().forEach(track => track.stop());
+        stream.getTracks().forEach((track) => track.stop()); 
       };
 
-      mediaRecorder.start();
-      setIsRecording(true);
+      mediaRecorder.start(); 
+      setIsRecording(true); 
     } catch (error) {
-      console.error('Recording error:', error);
+      console.error("Erro ao gravar:", error); 
     }
   };
 
+  // stopRecording
   const stopRecording = () => {
     mediaRecorderRef.current?.stop();
+    setIsProcessing(true); 
   };
+
 
   const formatTime = (seconds: number) => {
     const mins = Math.floor(seconds / 60);
@@ -75,18 +81,21 @@ export function AudioRecorder({
         <button
           className={cn(
             "group w-16 h-16 rounded-xl flex items-center justify-center transition-colors",
-            isRecording
+            isRecording || isProcessing
               ? "bg-none"
               : "bg-none hover:bg-black/10 dark:hover:bg-white/10"
           )}
           type="button"
           onClick={isRecording ? stopRecording : startRecording}
+          disabled={isProcessing}
         >
           {isRecording ? (
             <div
               className="w-6 h-6 rounded-sm animate-spin bg-black dark:bg-white cursor-pointer pointer-events-auto"
               style={{ animationDuration: "3s" }}
             />
+          ) : isProcessing ? (
+            <div className="w-6 h-6 rounded-sm animate-spin bg-black dark:bg-white" />
           ) : (
             <Mic className="w-6 h-6 text-black/70 dark:text-white/70" />
           )}
@@ -95,7 +104,7 @@ export function AudioRecorder({
         <span
           className={cn(
             "font-mono text-sm transition-opacity duration-300",
-            isRecording
+            isRecording || isProcessing
               ? "text-black/70 dark:text-white/70"
               : "text-black/30 dark:text-white/30"
           )}
@@ -126,7 +135,11 @@ export function AudioRecorder({
         </div>
 
         <p className="h-4 text-xs text-black/70 dark:text-white/70">
-          {isRecording ? "Ouvindo..." : "Clique para falar"}
+          {isRecording
+            ? "Ouvindo..."
+            : isProcessing
+            ? "Pensando no que você disse..." // mensagem de "pensando"
+            : "Clique para falar"}
         </p>
       </div>
     </div>
